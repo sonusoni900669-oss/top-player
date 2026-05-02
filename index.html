@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AT-LIVE LIVE FEED</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { 
+            --accent: #ffd700;
+            --play-top: 3px;
+            --play-size: 203px;
+            --frame-top: -23%;
+            --frame-left: -15%;
+            --frame-width: 126%;
+            --frame-height: 144%;
+        }
+
+        /* Scrollbar completely hidden for a clean look */
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+
+        body { 
+            margin: 0; padding: 0;
+            font-family: 'Algerian', 'Outfit', sans-serif; 
+            color: white; 
+            background-color: #000; 
+            background-image: url('stair.png');
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-attachment: fixed;
+            /* Changed to contain for perfect fit without stretching */
+            background-size: contain; 
+            display: flex; flex-direction: column; 
+            align-items: center; height: 100vh; overflow: hidden;
+        }
+
+        .play-icon {
+            position: fixed; top: -200px;
+            width: var(--play-size); height: var(--play-size);
+            z-index: 2; pointer-events: none;
+            animation: slideDown 1s forwards;
+        }
+        @keyframes slideDown { to { top: var(--play-top); } }
+
+        .content-wrapper { 
+            position: relative; z-index: 1; 
+            width: 100%; max-width: 400px; 
+            display: flex; flex-direction: column; 
+            align-items: center; height: 100vh;
+        }
+
+        #countryTabs { 
+            display: flex; margin-top: 190px; margin-bottom: 15px;
+            width: 88%; overflow-x: auto; 
+            gap: 10px; padding: 5px; flex-shrink: 0;
+        }
+
+        .tab { 
+            padding: 10px 20px; border-radius: 12px;
+            background: rgba(0, 0, 0, 0.6); border: 1px solid var(--accent); 
+            cursor: pointer; font-family: 'Algerian', sans-serif;
+            color: white; transition: all 0.3s ease;
+            white-space: nowrap; box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+        }
+        
+        .tab.active { background: #4b0082; transform: scale(1.05); border-color: white; }
+
+        #resellerList { 
+            display: flex; flex-direction: column; gap: 14px; 
+            width: 95%; flex: 1; overflow-y: auto; 
+            align-items: center; padding-bottom: 20px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .loading-buffer { font-family: 'Algerian', sans-serif; margin-top: 50px; color: var(--accent); letter-spacing: 2px; }
+        
+        .reseller-card { 
+            position: relative; width: 78%; height: 125px; 
+            background-size: 100% 100%; display: flex; align-items: center; padding: 0 15px;
+            transition: transform 0.2s; flex-shrink: 0;
+        }
+        
+        .dp-container { position: relative; width: 88px; height: 68px; }
+
+        .profile-frame { 
+            position: absolute; 
+            top: var(--frame-top); 
+            left: var(--frame-left); 
+            width: var(--frame-width); 
+            height: var(--frame-height);
+            z-index: 2; pointer-events: none; background-size: contain; background-repeat: no-repeat; 
+        }
+
+        .profile-dp { width: 68px; height: 68px; border-radius: 50%; border: 2px solid var(--accent); background-size: cover; }
+        
+        .info { margin-left: 18px; display: flex; flex-direction: column; }
+        .reseller-name { font-family: 'Algerian', sans-serif; font-size: 1.2rem; text-shadow: 2px 2px 4px #000; }
+        .uid-container { font-family: 'Algerian', sans-serif; font-size: 0.8rem; color: white; display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+        .copy-btn { cursor: pointer; color: white; }
+    </style>
+</head>
+<body>
+
+    <img src="play.png" class="play-icon" alt="Play">
+
+    <div class="content-wrapper">
+        <div id="countryTabs"></div>
+        <div id="resellerList"><div class="loading-buffer">LOADING TOP PLAYERS...</div></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCwXTruaSa8YwQdQ-zO3UO63gmvGevPVi4",
+            authDomain: "at-live-ad234.firebaseapp.com",
+            databaseURL: "https://at-live-ad234-default-rtdb.firebaseio.com",
+            projectId: "at-live-ad234",
+            storageBucket: "at-live-ad234.firebasestorage.app",
+            messagingSenderId: "424883898783",
+            appId: "1:424883898783:web:6f5e213ea902bf5ac255aa"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let allUsers = [];
+        let activeTab = ""; 
+
+        window.copyUID = (uid, btn) => {
+            navigator.clipboard.writeText(uid);
+            btn.innerHTML = "COPIED!";
+            setTimeout(() => btn.innerHTML = '<i class="fas fa-copy"></i>', 2000);
+        };
+
+        onValue(ref(db, 'at_live_data'), (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                allUsers = Object.values(data);
+                if (!activeTab && allUsers.length > 0) activeTab = allUsers[0].section;
+                renderTabs();
+            }
+        });
+
+        window.filterSection = (section) => {
+            activeTab = section;
+            renderTabs();
+        };
+
+        function renderTabs() {
+            const sections = [...new Set(allUsers.map(u => u.section))];
+            document.getElementById('countryTabs').innerHTML = sections.map(s => `
+                <div class="tab ${s === activeTab ? 'active' : ''}" onclick="filterSection('${s}')">${s}</div>
+            `).join('');
+            displayList(allUsers.filter(u => u.section === activeTab));
+        }
+
+        function displayList(users) {
+            document.getElementById('resellerList').innerHTML = users.map(user => `
+                <div class="reseller-card" style="background-image: url('${user.bgFrame || ''}')">
+                    <div class="dp-container">
+                        ${user.profileFrame ? `<div class="profile-frame" style="background-image: url('${user.profileFrame}')"></div>` : ''}
+                        <div class="profile-dp" style="background-image: url('${user.profileImg || ''}')"></div>
+                    </div>
+                    <div class="info">
+                        <div class="reseller-name">${user.name}</div>
+                        <div class="uid-container">
+                            UID: ${user.uid} 
+                            <span class="copy-btn" onclick="copyUID('${user.uid}', this)"><i class="fas fa-copy"></i></span>
+                        </div>
+                    </div>
+                </div>`).join('');
+        }
+    </script>
+</body>
+</html>

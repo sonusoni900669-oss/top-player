@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - AT-Live</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: 'Poppins', sans-serif; padding: 15px; background: #f4f7f6; }
+        .admin-box { max-width: 500px; background: white; margin: auto; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .back-btn { display: inline-block; margin-bottom: 15px; cursor: pointer; color: #007bff; text-decoration: underline; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: 600; font-size: 0.8rem; color: #555; margin-bottom: 5px; }
+        input { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .btn-upload { width: 100%; padding: 14px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px; }
+        .preview-img { width: 50px; height: 50px; margin-top: 5px; border: 1px solid #ccc; display: none; }
+        .section-header { font-weight: bold; margin-top: 20px; color: #333; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
+        .data-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #fff; border-bottom: 1px solid #eee; }
+        .actions { display: flex; gap: 10px; }
+        .btn-action { border: none; cursor: pointer; padding: 6px 12px; border-radius: 5px; }
+        .del { background: #ff4d4d; color: white; }
+        .edit { background: #ffa500; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="admin-box">
+    <div class="back-btn" onclick="window.location.href='index.html'"><i class="fas fa-arrow-left"></i> Back to Home</div>
+    <h2>AT-Live Management</h2>
+    
+    <div class="form-group"><input type="text" id="userSection" placeholder="Section Name"></div>
+    
+    <div class="form-group">
+        <label>Background Frame</label><input type="file" id="bgFrame" accept=".svg, .png">
+        <img id="prevBg" class="preview-img">
+    </div>
+    <div class="form-group">
+        <label>Profile Frame</label><input type="file" id="profileFrame" accept=".svg, .png">
+        <img id="prevFrame" class="preview-img">
+    </div>
+    <div class="form-group">
+        <label>User Profile</label><input type="file" id="profile" accept="image/*">
+        <img id="prevProfile" class="preview-img">
+    </div>
+    
+    <div class="form-group"><input type="text" id="userName" placeholder="Name"></div>
+    <div class="form-group"><input type="text" id="uid" placeholder="UID"></div>
+    
+    <button class="btn-upload" id="submitBtn" onclick="uploadData()">Upload to Live Server</button>
+    <div id="dataList" style="margin-top: 20px;"></div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const db = getDatabase(initializeApp({
+        apiKey: "AIzaSyCwXTruaSa8YwQdQ-zO3UO63gmvGevPVi4",
+        databaseURL: "https://at-live-ad234-default-rtdb.firebaseio.com",
+        projectId: "at-live-ad234"
+    }));
+
+    let editKey = null;
+    let currentData = {};
+
+    onValue(ref(db, 'at_live_data'), (snapshot) => {
+        const listDiv = document.getElementById('dataList');
+        listDiv.innerHTML = '<h3>Live Data</h3>';
+        currentData = snapshot.val() || {};
+        const sections = [...new Set(Object.values(currentData).map(u => u.section))];
+        
+        sections.forEach(sec => {
+            listDiv.innerHTML += `<div class="section-header">${sec || 'No Section'}</div>`;
+            Object.keys(currentData).forEach(key => {
+                if(currentData[key].section === sec) {
+                    listDiv.innerHTML += `
+                        <div class="data-item">
+                            <span>${currentData[key].name}</span>
+                            <div class="actions">
+                                <button class="btn-action edit" onclick="editItem('${key}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn-action del" onclick="deleteItem('${key}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>`;
+                }
+            });
+        });
+    });
+
+    window.deleteItem = (key) => { if(confirm('Delete this?')) remove(ref(db, 'at_live_data/' + key)); };
+
+    window.editItem = (key) => {
+        const item = currentData[key];
+        document.getElementById('userSection').value = item.section;
+        document.getElementById('userName').value = item.name;
+        document.getElementById('uid').value = item.uid;
+        
+        // Show Previews
+        const setPrev = (id, src) => { const img = document.getElementById(id); img.src = src; img.style.display = src ? 'block' : 'none'; };
+        setPrev('prevBg', item.bgFrame);
+        setPrev('prevFrame', item.profileFrame);
+        setPrev('prevProfile', item.profileImg);
+        
+        editKey = key;
+        document.getElementById('submitBtn').innerText = "Update Data";
+        window.scrollTo(0,0);
+    };
+
+    const toBase64 = file => new Promise((resolve) => {
+        if (!file) resolve(null);
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+    });
+
+    window.uploadData = async function() {
+        const bgFile = document.getElementById('bgFrame').files[0];
+        const profFile = document.getElementById('profile').files[0];
+        const frameFile = document.getElementById('profileFrame').files[0];
+
+        const userData = {
+            section: document.getElementById('userSection').value,
+            name: document.getElementById('userName').value,
+            uid: document.getElementById('uid').value,
+            ...(bgFile && {bgFrame: await toBase64(bgFile)}),
+            ...(profFile && {profileImg: await toBase64(profFile)}),
+            ...(frameFile && {profileFrame: await toBase64(frameFile)})
+        };
+
+        if (editKey) {
+            await update(ref(db, 'at_live_data/' + editKey), userData);
+            editKey = null;
+            document.getElementById('submitBtn').innerText = "Upload to Live Server";
+        } else {
+            await push(ref(db, 'at_live_data'), userData);
+        }
+        alert('Data Saved!');
+    };
+</script>
+</body>
+</html>
