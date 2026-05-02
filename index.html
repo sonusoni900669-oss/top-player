@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AT-LIVE LIVE FEED</title>
+    <title>AT-LIVE LIVE </title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -17,7 +17,6 @@
             --frame-height: 144%;
         }
 
-        /* Scrollbar completely hidden for a clean look */
         ::-webkit-scrollbar { display: none; }
         * { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -30,7 +29,6 @@
             background-repeat: no-repeat;
             background-position: center center;
             background-attachment: fixed;
-            /* Changed to contain for perfect fit without stretching */
             background-size: contain; 
             display: flex; flex-direction: column; 
             align-items: center; height: 100vh; overflow: hidden;
@@ -112,7 +110,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, get, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCwXTruaSa8YwQdQ-zO3UO63gmvGevPVi4",
@@ -126,24 +124,34 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        const dataRef = ref(db, 'at_live_data');
 
         let allUsers = [];
         let activeTab = ""; 
+
+        // Fast Initial Data Load
+        get(dataRef).then((snapshot) => {
+            if (snapshot.exists()) {
+                allUsers = Object.values(snapshot.val());
+                if (!activeTab && allUsers.length > 0) activeTab = allUsers[0].section;
+                renderTabs();
+            }
+        });
+
+        // Real-time Update Listener
+        onValue(dataRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                allUsers = Object.values(data);
+                renderTabs();
+            }
+        });
 
         window.copyUID = (uid, btn) => {
             navigator.clipboard.writeText(uid);
             btn.innerHTML = "COPIED!";
             setTimeout(() => btn.innerHTML = '<i class="fas fa-copy"></i>', 2000);
         };
-
-        onValue(ref(db, 'at_live_data'), (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                allUsers = Object.values(data);
-                if (!activeTab && allUsers.length > 0) activeTab = allUsers[0].section;
-                renderTabs();
-            }
-        });
 
         window.filterSection = (section) => {
             activeTab = section;
