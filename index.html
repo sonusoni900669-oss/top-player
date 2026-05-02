@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AT-LIVE LIVE </title>
+    <title>AT-LIVE </title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -18,7 +18,7 @@
         }
 
         ::-webkit-scrollbar { display: none; }
-        * { -ms-overflow-style: none; scrollbar-width: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; box-sizing: border-box; }
 
         body { 
             margin: 0; padding: 0;
@@ -31,7 +31,7 @@
             background-attachment: fixed;
             background-size: contain; 
             display: flex; flex-direction: column; 
-            align-items: center; height: 100vh; overflow: hidden;
+            align-items: center; height: 100dvh; overflow: hidden;
         }
 
         .play-icon {
@@ -46,12 +46,12 @@
             position: relative; z-index: 1; 
             width: 100%; max-width: 400px; 
             display: flex; flex-direction: column; 
-            align-items: center; height: 100vh;
+            align-items: center; height: 100%;
         }
 
         #countryTabs { 
             display: flex; margin-top: 190px; margin-bottom: 15px;
-            width: 88%; overflow-x: auto; 
+            width: 90%; overflow-x: auto; 
             gap: 10px; padding: 5px; flex-shrink: 0;
         }
 
@@ -75,12 +75,12 @@
         .loading-buffer { font-family: 'Algerian', sans-serif; margin-top: 50px; color: var(--accent); letter-spacing: 2px; }
         
         .reseller-card { 
-            position: relative; width: 78%; height: 125px; 
+            position: relative; width: 90%; height: 125px; 
             background-size: 100% 100%; display: flex; align-items: center; padding: 0 15px;
             transition: transform 0.2s; flex-shrink: 0;
         }
         
-        .dp-container { position: relative; width: 88px; height: 68px; }
+        .dp-container { position: relative; width: 88px; height: 68px; flex-shrink: 0; }
 
         .profile-frame { 
             position: absolute; 
@@ -93,8 +93,8 @@
 
         .profile-dp { width: 68px; height: 68px; border-radius: 50%; border: 2px solid var(--accent); background-size: cover; }
         
-        .info { margin-left: 18px; display: flex; flex-direction: column; }
-        .reseller-name { font-family: 'Algerian', sans-serif; font-size: 1.2rem; text-shadow: 2px 2px 4px #000; }
+        .info { margin-left: 18px; display: flex; flex-direction: column; overflow: hidden; }
+        .reseller-name { font-family: 'Algerian', sans-serif; font-size: 1.2rem; text-shadow: 2px 2px 4px #000; white-space: nowrap; }
         .uid-container { font-family: 'Algerian', sans-serif; font-size: 0.8rem; color: white; display: flex; align-items: center; gap: 8px; margin-top: 5px; }
         .copy-btn { cursor: pointer; color: white; }
     </style>
@@ -129,7 +129,6 @@
         let allUsers = [];
         let activeTab = ""; 
 
-        // Fast Initial Data Load
         get(dataRef).then((snapshot) => {
             if (snapshot.exists()) {
                 allUsers = Object.values(snapshot.val());
@@ -138,7 +137,6 @@
             }
         });
 
-        // Real-time Update Listener
         onValue(dataRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
